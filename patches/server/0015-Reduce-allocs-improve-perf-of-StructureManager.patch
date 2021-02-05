@@ -9,7 +9,7 @@ calculate an entire list when it returns early. As well, it uses a
 LongIterator in order to not allocate longs for each position.
 
 diff --git a/src/main/java/net/minecraft/server/StructureManager.java b/src/main/java/net/minecraft/server/StructureManager.java
-index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..517bb3e3e39efb8fda788e133f232b15044dbdd9 100644
+index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..1c69cd7803b4f3485e387ca3a51d5b1f82feda38 100644
 --- a/src/main/java/net/minecraft/server/StructureManager.java
 +++ b/src/main/java/net/minecraft/server/StructureManager.java
 @@ -41,13 +41,15 @@ public class StructureManager {
@@ -31,13 +31,11 @@ index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..517bb3e3e39efb8fda788e133f232b15
          return list;
      }
      // Paper end
-@@ -75,18 +77,32 @@ public class StructureManager {
+@@ -75,7 +77,18 @@ public class StructureManager {
      }
      public StructureStart<?> getStructureStarts(BlockPosition blockposition, boolean flag, StructureGenerator<?> structuregenerator, IWorldReader world) {
          // Paper start - remove structure streams
 -        for (StructureStart<?> structurestart : getFeatureStarts(SectionPosition.a(blockposition), structuregenerator, world)) { // Tuinity end - add world parameter
--            if (structurestart.c().b(blockposition)) {
--                if (!flag) {
 +        // Airplane start - inline getFeatureStarts to skip creating the list
 +        SectionPosition sectionPosition = SectionPosition.a(blockposition);
 +
@@ -50,24 +48,16 @@ index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..517bb3e3e39efb8fda788e133f232b15
 +            StructureStart<?> structurestart = a(sectionPosition1, structuregenerator, getLevel().getChunkAt(sectionPosition1.a(), sectionPosition1.c(), ChunkStatus.STRUCTURE_STARTS));
 +            if (structurestart != null && structurestart.e()) {
 +
-+        if (structurestart.c().b(blockposition)) {
-+            if (!flag) {
-+                return structurestart;
-+            }
-+            for (StructurePiece structurepiece : structurestart.d()) {
-+                if (structurepiece.g().b(blockposition)) {
+             if (structurestart.c().b(blockposition)) {
+                 if (!flag) {
                      return structurestart;
+@@ -86,7 +99,10 @@ public class StructureManager {
+                     }
                  }
--                for (StructurePiece structurepiece : structurestart.d()) {
--                    if (structurepiece.g().b(blockposition)) {
--                        return structurestart;
--                    }
--                }
              }
-         }
 +
 +            }
-+        }
+         }
 +        // Airplane end
          return StructureStart.a;
          // Paper end
