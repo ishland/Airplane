@@ -9,10 +9,22 @@ calculate an entire list when it returns early. As well, it uses a
 LongIterator in order to not allocate longs for each position.
 
 diff --git a/src/main/java/net/minecraft/server/StructureManager.java b/src/main/java/net/minecraft/server/StructureManager.java
-index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..1c69cd7803b4f3485e387ca3a51d5b1f82feda38 100644
+index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..fd1f1e2d7e4be227697f534bdc6d9c52ceeeda4b 100644
 --- a/src/main/java/net/minecraft/server/StructureManager.java
 +++ b/src/main/java/net/minecraft/server/StructureManager.java
-@@ -41,13 +41,15 @@ public class StructureManager {
+@@ -5,6 +5,11 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList; // Paper
+ import java.util.stream.Stream;
+ import javax.annotation.Nullable;
+ 
++// Airplane start
++import it.unimi.dsi.fastutil.longs.LongIterator;
++import it.unimi.dsi.fastutil.longs.LongSet;
++// Airplane end
++
+ public class StructureManager {
+ 
+     private final GeneratorAccess a; public GeneratorAccess getLevel() { return a; } // Paper - OBFHELPER
+@@ -41,13 +46,15 @@ public class StructureManager {
      public java.util.List<StructureStart<?>> getFeatureStarts(SectionPosition sectionPosition, StructureGenerator<?> structureGenerator, IWorldReader world) {
          // Tuinity end - add world parameter
          java.util.List<StructureStart<?>> list = new ObjectArrayList<>();
@@ -31,7 +43,7 @@ index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..1c69cd7803b4f3485e387ca3a51d5b1f
          return list;
      }
      // Paper end
-@@ -75,7 +77,18 @@ public class StructureManager {
+@@ -75,7 +82,18 @@ public class StructureManager {
      }
      public StructureStart<?> getStructureStarts(BlockPosition blockposition, boolean flag, StructureGenerator<?> structuregenerator, IWorldReader world) {
          // Paper start - remove structure streams
@@ -40,8 +52,8 @@ index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..1c69cd7803b4f3485e387ca3a51d5b1f
 +        SectionPosition sectionPosition = SectionPosition.a(blockposition);
 +
 +        // use iterator here instead of forEach like in getFeatureStarts so we can return early
-+        it.unimi.dsi.fastutil.longs.LongSet longSet = (world == null ? getLevel() : world).getChunkAt(sectionPosition.a(), sectionPosition.c(), ChunkStatus.STRUCTURE_REFERENCES).b(structuregenerator);
-+        it.unimi.dsi.fastutil.longs.LongIterator iterator = longSet.iterator();
++        LongSet longSet = (world == null ? getLevel() : world).getChunkAt(sectionPosition.a(), sectionPosition.c(), ChunkStatus.STRUCTURE_REFERENCES).b(structuregenerator);
++        LongIterator iterator = longSet.iterator();
 +        while (iterator.hasNext()) {
 +            long curLong = iterator.nextLong();
 +            SectionPosition sectionPosition1 = SectionPosition.a(ChunkCoordIntPair.getX(curLong), 0, ChunkCoordIntPair.getZ(curLong)); // don't allocate ChunkCoordIntPair
@@ -51,7 +63,7 @@ index 2598ae3710d46c2cfd2be5d6be2a56e59ceef6ea..1c69cd7803b4f3485e387ca3a51d5b1f
              if (structurestart.c().b(blockposition)) {
                  if (!flag) {
                      return structurestart;
-@@ -86,7 +99,10 @@ public class StructureManager {
+@@ -86,7 +104,10 @@ public class StructureManager {
                      }
                  }
              }
