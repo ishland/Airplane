@@ -1,0 +1,160 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Sauve <paul@technove.co>
+Date: Sat, 6 Feb 2021 17:25:49 -0600
+Subject: [PATCH] m
+
+
+diff --git a/src/main/java/net/minecraft/server/FluidTypeLava.java b/src/main/java/net/minecraft/server/FluidTypeLava.java
+index 29930e801cdcb97bec2fb113ec478fe9c4a63b63..e505d2f180d183eaf2e92c8c63c7052b3933bedc 100644
+--- a/src/main/java/net/minecraft/server/FluidTypeLava.java
++++ b/src/main/java/net/minecraft/server/FluidTypeLava.java
+@@ -38,7 +38,7 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+                     IBlockData iblockdata = world.getType(blockposition1);
+ 
+                     if (iblockdata.isAir()) {
+-                        if (this.a((IWorldReader) world, blockposition1)) {
++                        if (this.hasBurnableBlockSurrounding(world, blockposition1)) { // Airplane - use direct world
+                             // CraftBukkit start - Prevent lava putting something on fire
+                             if (world.getType(blockposition1).getBlock() != Blocks.FIRE) {
+                                 if (org.bukkit.craftbukkit.event.CraftEventFactory.callBlockIgniteEvent(world, blockposition1, blockposition).isCancelled()) {
+@@ -61,7 +61,7 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+                         return;
+                     }
+ 
+-                    if (world.isEmpty(blockposition2.up()) && this.b(world, blockposition2)) {
++                    if (world.isEmpty(blockposition2.up()) && this.isBurnableBlock(world, blockposition2)) { // Airplane - use obfhelper
+                         // CraftBukkit start - Prevent lava putting something on fire
+                         BlockPosition up = blockposition2.up();
+                         if (world.getType(up).getBlock() != Blocks.FIRE) {
+@@ -78,14 +78,15 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+         }
+     }
+ 
+-    private boolean a(IWorldReader iworldreader, BlockPosition blockposition) {
++    private boolean hasBurnableBlockSurrounding(World world, BlockPosition blockposition) { return this.a(world, blockposition); } // Airplane - OBFHELPER
++    private boolean a(World iworldreader, BlockPosition blockposition) { // Airplane - change param
+         EnumDirection[] aenumdirection = EnumDirection.values();
+         int i = aenumdirection.length;
+ 
+         for (int j = 0; j < i; ++j) {
+             EnumDirection enumdirection = aenumdirection[j];
+ 
+-            if (this.b(iworldreader, blockposition.shift(enumdirection))) {
++            if (this.isBurnableBlock(iworldreader, blockposition.shift(enumdirection))) { // Airplane - use obfhelper
+                 return true;
+             }
+         }
+@@ -93,8 +94,9 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+         return false;
+     }
+ 
+-    private boolean b(IWorldReader iworldreader, BlockPosition blockposition) {
+-        return blockposition.getY() >= 0 && blockposition.getY() < 256 && !iworldreader.isLoaded(blockposition) ? false : iworldreader.getType(blockposition).getMaterial().isBurnable();
++    private boolean isBurnableBlock(World world, BlockPosition blockposition) { return this.b(world, blockposition); } // Airplane - OBFHELPER
++    private boolean b(World iworldreader, BlockPosition blockposition) { // Airplane - change param to world
++        return blockposition.getY() >= 0 && blockposition.getY() < 256 && iworldreader.getCurrentlyTickingChunkIfLoaded(blockposition) == null ? false : iworldreader.getType(blockposition).getMaterial().isBurnable(); // Airplane - use currently ticking chunk
+     }
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
+index d701c5f94fe13ce41bb45c54ddb7667e2f773086..dfea017fab7f6b76ad0468e9950e962f8d08036f 100644
+--- a/src/main/java/net/minecraft/server/World.java
++++ b/src/main/java/net/minecraft/server/World.java
+@@ -460,6 +460,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+     public final Chunk getChunkIfLoaded(BlockPosition blockposition) {
+         return ((WorldServer) this).getChunkProvider().getChunkAtIfLoadedImmediately(blockposition.getX() >> 4, blockposition.getZ() >> 4);
+     }
++    // Airplane start - getChunkIfLoaded with currently ticking check
++    public Chunk getCurrentlyTickingChunkIfLoaded(BlockPosition blockposition) {
++        int chunkX = blockposition.getX() >> 4, chunkZ = blockposition.getZ() >> 4;
++        if (this.currentlyTickingChunk != null && chunkX == this.currentlyTickingChunk.locX && chunkZ == this.currentlyTickingChunk.locZ) {
++            return this.currentlyTickingChunk;
++        }
++        return ((WorldServer) this).getChunkProvider().getChunkAtIfLoadedImmediately(chunkX, chunkZ);
++    }
++    // Airplane end
+ 
+     //  reduces need to do isLoaded before getType
+     public final IBlockData getTypeIfLoadedAndInBounds(BlockPosition blockposition) {
+@@ -787,6 +796,8 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+         return this.getChunkProvider().getLightEngine();
+     }
+ 
++    protected Chunk currentlyTickingChunk; // Airplane - the chunk being ticked
++
+     @Override
+     public IBlockData getType(BlockPosition blockposition) {
+         // CraftBukkit start - tree generation
+@@ -800,7 +811,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+         if (isOutsideWorld(blockposition)) {
+             return Blocks.VOID_AIR.getBlockData();
+         } else {
+-            Chunk chunk = (Chunk) this.getChunkProvider().getChunkAt(blockposition.getX() >> 4, blockposition.getZ() >> 4, ChunkStatus.FULL, true); // Paper - manually inline to reduce hops and avoid unnecessary null check to reduce total byte code size, this should never return null and if it does we will see it the next line but the real stack trace will matter in the chunk engine
++            // Airplane start
++            int chunkX = blockposition.getX() >> 4, chunkZ = blockposition.getZ() >> 4;
++            Chunk chunk;
++            if (this.currentlyTickingChunk != null && this.currentlyTickingChunk.locX == chunkX && this.currentlyTickingChunk.locZ == chunkZ) {
++                chunk = this.currentlyTickingChunk;
++            } else {
++                chunk = (Chunk) this.getChunkProvider().getChunkAt(chunkX, chunkZ, ChunkStatus.FULL, true); // Paper - manually inline to reduce hops and avoid unnecessary null check to reduce total byte code size, this should never return null and if it does we will see it the next line but the real stack trace will matter in the chunk engine
++            }
++            // Airplane end
+ 
+             return chunk.getType(blockposition);
+         }
+@@ -811,7 +830,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+         if (isOutsideWorld(blockposition)) {
+             return FluidTypes.EMPTY.h();
+         } else {
+-            Chunk chunk = this.getChunkAtWorldCoords(blockposition);
++            // Airplane start
++            int chunkX = blockposition.getX() >> 4, chunkZ = blockposition.getZ() >> 4;
++            Chunk chunk;
++            if (this.currentlyTickingChunk != null && this.currentlyTickingChunk.locX == chunkX && this.currentlyTickingChunk.locZ == chunkZ) {
++                chunk = this.currentlyTickingChunk;
++            } else {
++                chunk = this.getChunkAt(blockposition.getX() >> 4, blockposition.getZ() >> 4);
++            }
++            // Airplane end
+ 
+             return chunk.getFluid(blockposition);
+         }
+diff --git a/src/main/java/net/minecraft/server/WorldServer.java b/src/main/java/net/minecraft/server/WorldServer.java
+index e000723146d662f29dc279a168615ed9385d09ec..a8066f16442293d306ef944d1e4a5c120ca82a52 100644
+--- a/src/main/java/net/minecraft/server/WorldServer.java
++++ b/src/main/java/net/minecraft/server/WorldServer.java
+@@ -1049,6 +1049,7 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+         // Paper start - optimise random block ticking
+         gameprofilerfiller.exit();
+         if (i > 0) {
++            this.currentlyTickingChunk = chunk; // Airplane - assign currently ticking chunk
+             gameprofilerfiller.enter("randomTick");
+             timings.chunkTicksBlocks.startTiming(); // Paper
+ 
+@@ -1084,6 +1085,7 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+                     // TODO CHECK ON UPDATE
+                 }
+             }
++            this.currentlyTickingChunk = null; // Airplane - unassign currently ticking chunk
+             gameprofilerfiller.exit();
+             timings.chunkTicksBlocks.stopTiming(); // Paper
+             // Airplane start
+@@ -1177,12 +1179,16 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+     }
+ 
+     private void b(NextTickListEntry<Block> nextticklistentry) {
+-        IBlockData iblockdata = this.getType(nextticklistentry.a);
++        // Airplane start - store looked up chunk
++        Chunk chunk = this.getChunkAtWorldCoords(nextticklistentry.a);
++        IBlockData iblockdata = chunk.getType(nextticklistentry.a);
+ 
+         if (iblockdata.a((Block) nextticklistentry.b())) {
++            this.currentlyTickingChunk = chunk;
+             iblockdata.a(this, nextticklistentry.a, this.random);
++            this.currentlyTickingChunk = null;
++            // Airplane end
+         }
+-
+     }
+ 
+     // Tuinity start - log detailed entity tick information
