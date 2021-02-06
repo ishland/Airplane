@@ -1,0 +1,556 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Paul Sauve <paul@technove.co>
+Date: Sat, 6 Feb 2021 17:01:11 -0600
+Subject: [PATCH] Reduce chunk lookups from ticking blocks
+
+
+diff --git a/src/main/java/net/minecraft/server/BlockBamboo.java b/src/main/java/net/minecraft/server/BlockBamboo.java
+index 535535214119c2c0f080c328b70a02bb1f94a5cd..2eac4be2ef95db01c1400e7cca88f9cb672611b9 100644
+--- a/src/main/java/net/minecraft/server/BlockBamboo.java
++++ b/src/main/java/net/minecraft/server/BlockBamboo.java
+@@ -96,7 +96,7 @@ public class BlockBamboo extends Block implements IBlockFragilePlantElement {
+     @Override
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+         if ((Integer) iblockdata.get(BlockBamboo.f) == 0) {
+-            if (random.nextInt(Math.max(1, (int) (100.0F / worldserver.spigotConfig.bambooModifier) * 3)) == 0 && worldserver.isEmpty(blockposition.up()) && worldserver.getLightLevel(blockposition.up(), 0) >= 9) { // Spigot
++            if (random.nextInt(Math.max(1, (int) (100.0F / worldserver.spigotConfig.bambooModifier) * 3)) == 0 && worldserver.isCurrentlyTickingEmpty(blockposition.up()) && worldserver.getLightLevel(blockposition.up(), 0) >= 9) { // Spigot // Airplane - use currently ticking check
+                 int i = this.b(worldserver, blockposition) + 1;
+ 
+                 if (i < worldserver.paperConfig.bambooMaxHeight) { // Paper
+diff --git a/src/main/java/net/minecraft/server/BlockBambooSapling.java b/src/main/java/net/minecraft/server/BlockBambooSapling.java
+index 5474a8f233e7dd99dc1d1552cec4dd6c017cafad..933c87633206b65bac8b7b06b30789f4114e6342 100644
+--- a/src/main/java/net/minecraft/server/BlockBambooSapling.java
++++ b/src/main/java/net/minecraft/server/BlockBambooSapling.java
+@@ -24,7 +24,7 @@ public class BlockBambooSapling extends Block implements IBlockFragilePlantEleme
+ 
+     @Override
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+-        if (random.nextInt(3) == 0 && worldserver.isEmpty(blockposition.up()) && worldserver.getLightLevel(blockposition.up(), 0) >= 9) {
++        if (random.nextInt(3) == 0 && worldserver.isCurrentlyTickingEmpty(blockposition.up()) && worldserver.getLightLevel(blockposition.up(), 0) >= 9) { // Airplane - use currently ticking check
+             this.a((World) worldserver, blockposition);
+         }
+ 
+diff --git a/src/main/java/net/minecraft/server/BlockCactus.java b/src/main/java/net/minecraft/server/BlockCactus.java
+index 13e4517bd04096001ca1caf32b9949abb3cf9c7f..361143323f93715540bd0dd857fb0c27479894a8 100644
+--- a/src/main/java/net/minecraft/server/BlockCactus.java
++++ b/src/main/java/net/minecraft/server/BlockCactus.java
+@@ -28,10 +28,10 @@ public class BlockCactus extends Block {
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+         BlockPosition blockposition1 = blockposition.up();
+ 
+-        if (worldserver.isEmpty(blockposition1)) {
++        if (worldserver.isCurrentlyTickingEmpty(blockposition1)) { // Airplane - use currently ticking check
+             int i;
+ 
+-            for (i = 1; worldserver.getType(blockposition.down(i)).a((Block) this); ++i) {
++            for (i = 1; worldserver.getCurrentlyTickingType(blockposition.down(i)).a((Block) this); ++i) { // Airplane - use currently ticking check
+                 ;
+             }
+ 
+diff --git a/src/main/java/net/minecraft/server/BlockChorusFlower.java b/src/main/java/net/minecraft/server/BlockChorusFlower.java
+index ff1e69f95d566635c6ff4ed3926f4649565b91ac..ea1448d2d48ca9241a8bf34508e58df5a4e24398 100644
+--- a/src/main/java/net/minecraft/server/BlockChorusFlower.java
++++ b/src/main/java/net/minecraft/server/BlockChorusFlower.java
+@@ -34,13 +34,13 @@ public class BlockChorusFlower extends Block {
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+         BlockPosition blockposition1 = blockposition.up();
+ 
+-        if (worldserver.isEmpty(blockposition1) && blockposition1.getY() < 256) {
++        if (worldserver.isCurrentlyTickingEmpty(blockposition1) && blockposition1.getY() < 256) { // Airplane - use currently ticking check
+             int i = (Integer) iblockdata.get(BlockChorusFlower.AGE);
+ 
+             if (i < 5) {
+                 boolean flag = false;
+                 boolean flag1 = false;
+-                IBlockData iblockdata1 = worldserver.getType(blockposition.down());
++                IBlockData iblockdata1 = worldserver.getCurrentlyTickingType(blockposition.down()); // Airplane - use currently ticking check
+                 Block block = iblockdata1.getBlock();
+                 int j;
+ 
+@@ -50,7 +50,7 @@ public class BlockChorusFlower extends Block {
+                     j = 1;
+ 
+                     for (int k = 0; k < 4; ++k) {
+-                        Block block1 = worldserver.getType(blockposition.down(j + 1)).getBlock();
++                        Block block1 = worldserver.getCurrentlyTickingType(blockposition.down(j + 1)).getBlock(); // Airplane - use currently ticking check
+ 
+                         if (block1 != this.b) {
+                             if (block1 == Blocks.END_STONE) {
+@@ -69,7 +69,7 @@ public class BlockChorusFlower extends Block {
+                     flag = true;
+                 }
+ 
+-                if (flag && b((IWorldReader) worldserver, blockposition1, (EnumDirection) null) && worldserver.isEmpty(blockposition.up(2))) {
++                if (flag && b((IWorldReader) worldserver, blockposition1, (EnumDirection) null) && worldserver.isCurrentlyTickingEmpty(blockposition.up(2))) { // Airplane - use currently ticking check
+                     // CraftBukkit start - add event
+                     if (CraftEventFactory.handleBlockSpreadEvent(worldserver, blockposition, blockposition1, this.getBlockData().set(BlockChorusFlower.AGE, Integer.valueOf(i)), 2)) {
+                         worldserver.setTypeAndData(blockposition, this.b.a((IBlockAccess) worldserver, blockposition), 2);
+@@ -88,7 +88,7 @@ public class BlockChorusFlower extends Block {
+                         EnumDirection enumdirection = EnumDirection.EnumDirectionLimit.HORIZONTAL.a(random);
+                         BlockPosition blockposition2 = blockposition.shift(enumdirection);
+ 
+-                        if (worldserver.isEmpty(blockposition2) && worldserver.isEmpty(blockposition2.down()) && b((IWorldReader) worldserver, blockposition2, enumdirection.opposite())) {
++                        if (worldserver.isCurrentlyTickingEmpty(blockposition2) && worldserver.isCurrentlyTickingEmpty(blockposition2.down()) && b((IWorldReader) worldserver, blockposition2, enumdirection.opposite())) { // Airplane - use currently ticking check
+                             // CraftBukkit start - add event
+                             if (CraftEventFactory.handleBlockSpreadEvent(worldserver, blockposition, blockposition2, this.getBlockData().set(BlockChorusFlower.AGE, Integer.valueOf(i + 1)), 2)) {
+                                 this.a(worldserver, blockposition2, i + 1);
+diff --git a/src/main/java/net/minecraft/server/BlockCrops.java b/src/main/java/net/minecraft/server/BlockCrops.java
+index 0fdc960fa3bbe6506185480a7a86d5009d70b385..ecd84088b432f7bbfb0bb4d1430cdfcd73ac412b 100644
+--- a/src/main/java/net/minecraft/server/BlockCrops.java
++++ b/src/main/java/net/minecraft/server/BlockCrops.java
+@@ -55,7 +55,7 @@ public class BlockCrops extends BlockPlant implements IBlockFragilePlantElement
+             int i = this.g(iblockdata);
+ 
+             if (i < this.d()) {
+-                float f = a((Block) this, (IBlockAccess) worldserver, blockposition);
++                float f = a((Block) this, worldserver, blockposition); // Airplane - remove cast to IBlockAccess
+ 
+                 // Spigot start
+                 int modifier;
+@@ -93,14 +93,14 @@ public class BlockCrops extends BlockPlant implements IBlockFragilePlantElement
+         return MathHelper.nextInt(world.random, 2, 5);
+     }
+ 
+-    protected static float a(Block block, IBlockAccess iblockaccess, BlockPosition blockposition) {
++    protected static float a(Block block, WorldServer iblockaccess, BlockPosition blockposition) { // Airplane - use worldserver
+         float f = 1.0F;
+         BlockPosition blockposition1 = blockposition.down();
+ 
+         for (int i = -1; i <= 1; ++i) {
+             for (int j = -1; j <= 1; ++j) {
+                 float f1 = 0.0F;
+-                IBlockData iblockdata = iblockaccess.getType(blockposition1.b(i, 0, j));
++                IBlockData iblockdata = iblockaccess.getCurrentlyTickingType(blockposition1.b(i, 0, j)); // Airplane - use currently ticking type
+ 
+                 if (iblockdata.a(Blocks.FARMLAND)) {
+                     f1 = 1.0F;
+@@ -121,13 +121,13 @@ public class BlockCrops extends BlockPlant implements IBlockFragilePlantElement
+         BlockPosition blockposition3 = blockposition.south();
+         BlockPosition blockposition4 = blockposition.west();
+         BlockPosition blockposition5 = blockposition.east();
+-        boolean flag = block == iblockaccess.getType(blockposition4).getBlock() || block == iblockaccess.getType(blockposition5).getBlock();
+-        boolean flag1 = block == iblockaccess.getType(blockposition2).getBlock() || block == iblockaccess.getType(blockposition3).getBlock();
++        boolean flag = block == iblockaccess.getCurrentlyTickingType(blockposition4).getBlock() || block == iblockaccess.getCurrentlyTickingType(blockposition5).getBlock(); // Airplane - use currently ticking type
++        boolean flag1 = block == iblockaccess.getCurrentlyTickingType(blockposition2).getBlock() || block == iblockaccess.getCurrentlyTickingType(blockposition3).getBlock(); // Airplane - use currently ticking type
+ 
+         if (flag && flag1) {
+             f /= 2.0F;
+         } else {
+-            boolean flag2 = block == iblockaccess.getType(blockposition4.north()).getBlock() || block == iblockaccess.getType(blockposition5.north()).getBlock() || block == iblockaccess.getType(blockposition5.south()).getBlock() || block == iblockaccess.getType(blockposition4.south()).getBlock();
++            boolean flag2 = block == iblockaccess.getCurrentlyTickingType(blockposition4.north()).getBlock() || block == iblockaccess.getCurrentlyTickingType(blockposition5.north()).getBlock() || block == iblockaccess.getCurrentlyTickingType(blockposition5.south()).getBlock() || block == iblockaccess.getCurrentlyTickingType(blockposition4.south()).getBlock(); // Airplane - use currently ticking type
+ 
+             if (flag2) {
+                 f /= 2.0F;
+diff --git a/src/main/java/net/minecraft/server/BlockDirtSnowSpreadable.java b/src/main/java/net/minecraft/server/BlockDirtSnowSpreadable.java
+index 7b29d47dfdef7611db58068af285f76d92a9f12a..e7c08993089defb178dce758fae3eff80984d8e2 100644
+--- a/src/main/java/net/minecraft/server/BlockDirtSnowSpreadable.java
++++ b/src/main/java/net/minecraft/server/BlockDirtSnowSpreadable.java
+@@ -8,9 +8,9 @@ public abstract class BlockDirtSnowSpreadable extends BlockDirtSnow {
+         super(blockbase_info);
+     }
+ 
+-    private static boolean b(IBlockData iblockdata, IWorldReader iworldreader, BlockPosition blockposition) {
++    private static boolean b(IBlockData iblockdata, WorldServer iworldreader, BlockPosition blockposition) { // Airplane - change param to worldserver
+         BlockPosition blockposition1 = blockposition.up();
+-        IBlockData iblockdata1 = iworldreader.getType(blockposition1);
++        IBlockData iblockdata1 = iworldreader.getCurrentlyTickingType(blockposition1); // Airplane - use currently ticking type
+ 
+         if (iblockdata1.a(Blocks.SNOW) && (Integer) iblockdata1.get(BlockSnow.LAYERS) == 1) {
+             return true;
+@@ -23,16 +23,16 @@ public abstract class BlockDirtSnowSpreadable extends BlockDirtSnow {
+         }
+     }
+ 
+-    private static boolean c(IBlockData iblockdata, IWorldReader iworldreader, BlockPosition blockposition) {
++    private static boolean c(IBlockData iblockdata, WorldServer iworldreader, BlockPosition blockposition) { // Airplane - change param to worldserver
+         BlockPosition blockposition1 = blockposition.up();
+ 
+-        return b(iblockdata, iworldreader, blockposition) && !iworldreader.getFluid(blockposition1).a((Tag) TagsFluid.WATER);
++        return b(iblockdata, iworldreader, blockposition) && !iworldreader.getCurrentlyTickingFluid(blockposition1).a((Tag) TagsFluid.WATER); // Airplane - use currently ticking fluid
+     }
+ 
+     @Override
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+         if (this instanceof BlockGrass && worldserver.paperConfig.grassUpdateRate != 1 && (worldserver.paperConfig.grassUpdateRate < 1 || (MinecraftServer.currentTick + blockposition.hashCode()) % worldserver.paperConfig.grassUpdateRate != 0)) { return; } // Paper
+-        if (!b(iblockdata, (IWorldReader) worldserver, blockposition)) {
++        if (!b(iblockdata, worldserver, blockposition)) { // Airplane - remove cast
+             // CraftBukkit start
+             if (org.bukkit.craftbukkit.event.CraftEventFactory.callBlockFadeEvent(worldserver, blockposition, Blocks.DIRT.getBlockData()).isCancelled()) {
+                 return;
+@@ -46,7 +46,7 @@ public abstract class BlockDirtSnowSpreadable extends BlockDirtSnow {
+                 for (int i = 0; i < 4; ++i) {
+                     BlockPosition blockposition1 = blockposition.b(random.nextInt(3) - 1, random.nextInt(5) - 3, random.nextInt(3) - 1);
+ 
+-                    if (worldserver.getType(blockposition1).a(Blocks.DIRT) && c(iblockdata1, (IWorldReader) worldserver, blockposition1)) {
++                    if (worldserver.getType(blockposition1).a(Blocks.DIRT) && c(iblockdata1, worldserver, blockposition1)) { // Airplane - remove cast
+                         org.bukkit.craftbukkit.event.CraftEventFactory.handleBlockSpreadEvent(worldserver, blockposition, blockposition1, (IBlockData) iblockdata1.set(BlockDirtSnowSpreadable.a, worldserver.getType(blockposition1.up()).a(Blocks.SNOW))); // CraftBukkit
+                     }
+                 }
+diff --git a/src/main/java/net/minecraft/server/BlockMagma.java b/src/main/java/net/minecraft/server/BlockMagma.java
+index 63b69c62170c8bb12250adb3a274ad754a78301c..dff5d0428bf8ed1d6b600cdbf8dcf7a6b037a1a4 100644
+--- a/src/main/java/net/minecraft/server/BlockMagma.java
++++ b/src/main/java/net/minecraft/server/BlockMagma.java
+@@ -37,7 +37,7 @@ public class BlockMagma extends Block {
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+         BlockPosition blockposition1 = blockposition.up();
+ 
+-        if (worldserver.getFluid(blockposition).a((Tag) TagsFluid.WATER)) {
++        if (worldserver.getCurrentlyTickingFluid(blockposition).a((Tag) TagsFluid.WATER)) { // Airplane - use ticking fluid
+             worldserver.playSound((EntityHuman) null, blockposition, SoundEffects.BLOCK_FIRE_EXTINGUISH, SoundCategory.BLOCKS, 0.5F, 2.6F + (worldserver.random.nextFloat() - worldserver.random.nextFloat()) * 0.8F);
+             worldserver.a(Particles.LARGE_SMOKE, (double) blockposition1.getX() + 0.5D, (double) blockposition1.getY() + 0.25D, (double) blockposition1.getZ() + 0.5D, 8, 0.5D, 0.25D, 0.5D, 0.0D);
+         }
+diff --git a/src/main/java/net/minecraft/server/BlockMushroom.java b/src/main/java/net/minecraft/server/BlockMushroom.java
+index 9409cb3784499ae83988bcbfd59771d675ba002c..329807cc3917649ca479ed923808f46cc781987f 100644
+--- a/src/main/java/net/minecraft/server/BlockMushroom.java
++++ b/src/main/java/net/minecraft/server/BlockMushroom.java
+@@ -30,7 +30,7 @@ public class BlockMushroom extends BlockPlant implements IBlockFragilePlantEleme
+             while (iterator.hasNext()) {
+                 BlockPosition blockposition1 = (BlockPosition) iterator.next();
+ 
+-                if (worldserver.getType(blockposition1).a((Block) this)) {
++                if (worldserver.getCurrentlyTickingType(blockposition1).a((Block) this)) { // Airplane - use currently ticking type
+                     --i;
+                     if (i <= 0) {
+                         return;
+@@ -41,14 +41,14 @@ public class BlockMushroom extends BlockPlant implements IBlockFragilePlantEleme
+             BlockPosition blockposition2 = blockposition.b(random.nextInt(3) - 1, random.nextInt(2) - random.nextInt(2), random.nextInt(3) - 1);
+ 
+             for (int j = 0; j < 4; ++j) {
+-                if (worldserver.isEmpty(blockposition2) && iblockdata.canPlace(worldserver, blockposition2)) {
++                if (worldserver.isCurrentlyTickingEmpty(blockposition2) && iblockdata.canPlace(worldserver, blockposition2)) { // Airplane - use currently ticking check
+                     blockposition = blockposition2;
+                 }
+ 
+                 blockposition2 = blockposition.b(random.nextInt(3) - 1, random.nextInt(2) - random.nextInt(2), random.nextInt(3) - 1);
+             }
+ 
+-            if (worldserver.isEmpty(blockposition2) && iblockdata.canPlace(worldserver, blockposition2)) {
++            if (worldserver.isCurrentlyTickingEmpty(blockposition2) && iblockdata.canPlace(worldserver, blockposition2)) { // Airplane - use currently ticking check
+                 org.bukkit.craftbukkit.event.CraftEventFactory.handleBlockSpreadEvent(worldserver, blockposition, blockposition2, iblockdata, 2); // CraftBukkit
+             }
+         }
+diff --git a/src/main/java/net/minecraft/server/BlockPortal.java b/src/main/java/net/minecraft/server/BlockPortal.java
+index 4132cd4c6f13cfa1c0cda43daaa908ff3c07f32b..f8ff79e71f807d4be6fc7f3d6df5ddb60b48a532 100644
+--- a/src/main/java/net/minecraft/server/BlockPortal.java
++++ b/src/main/java/net/minecraft/server/BlockPortal.java
+@@ -34,11 +34,11 @@ public class BlockPortal extends Block {
+     @Override
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+         if (worldserver.spigotConfig.enableZombiePigmenPortalSpawns && worldserver.getDimensionManager().isNatural() && worldserver.getGameRules().getBoolean(GameRules.DO_MOB_SPAWNING) && random.nextInt(2000) < worldserver.getDifficulty().a()) { // Spigot
+-            while (worldserver.getType(blockposition).a((Block) this)) {
++            while (worldserver.getCurrentlyTickingType(blockposition).a((Block) this)) { // Airplane - use currently ticking type
+                 blockposition = blockposition.down();
+             }
+ 
+-            if (worldserver.getType(blockposition).a((IBlockAccess) worldserver, blockposition, EntityTypes.ZOMBIFIED_PIGLIN)) {
++            if (worldserver.getCurrentlyTickingType(blockposition).a((IBlockAccess) worldserver, blockposition, EntityTypes.ZOMBIFIED_PIGLIN)) { // Airplane - use currently ticking type
+                 // CraftBukkit - set spawn reason to NETHER_PORTAL
+                 Entity entity = EntityTypes.ZOMBIFIED_PIGLIN.spawnCreature(worldserver, (NBTTagCompound) null, (IChatBaseComponent) null, (EntityHuman) null, blockposition.up(), EnumMobSpawn.STRUCTURE, false, false, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NETHER_PORTAL);
+ 
+diff --git a/src/main/java/net/minecraft/server/BlockReed.java b/src/main/java/net/minecraft/server/BlockReed.java
+index c051decd19ff763a061822bc2a4b03289dfe3ac7..9e27c3d6b6f7bf3d0e6674ec0a6dc0c0020ea89c 100644
+--- a/src/main/java/net/minecraft/server/BlockReed.java
++++ b/src/main/java/net/minecraft/server/BlockReed.java
+@@ -28,10 +28,10 @@ public class BlockReed extends Block {
+ 
+     @Override
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+-        if (worldserver.isEmpty(blockposition.up())) {
++        if (worldserver.isCurrentlyTickingEmpty(blockposition.up())) { // Airplane - use currently ticking check
+             int i;
+ 
+-            for (i = 1; worldserver.getType(blockposition.down(i)).a((Block) this); ++i) {
++            for (i = 1; worldserver.getCurrentlyTickingType(blockposition.down(i)).a((Block) this); ++i) { // Airplane - use currently ticking type
+                 ;
+             }
+ 
+diff --git a/src/main/java/net/minecraft/server/BlockSoil.java b/src/main/java/net/minecraft/server/BlockSoil.java
+index a315e2628c35ee713b68741c6e52c4b140c05f27..fe21b3fb89544089ebda383dd77c31d9ed9e291f 100644
+--- a/src/main/java/net/minecraft/server/BlockSoil.java
++++ b/src/main/java/net/minecraft/server/BlockSoil.java
+@@ -61,10 +61,10 @@ public class BlockSoil extends Block {
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+         int i = (Integer) iblockdata.get(BlockSoil.MOISTURE);
+ 
+-        if (!a((IWorldReader) worldserver, blockposition) && !worldserver.isRainingAt(blockposition.up())) {
++        if (!a((WorldServer) worldserver, blockposition) && !worldserver.isRainingAt(blockposition.up())) { // Airplane - change WorldReader cast -> WorldServer
+             if (i > 0) {
+                 org.bukkit.craftbukkit.event.CraftEventFactory.handleMoistureChangeEvent(worldserver, blockposition, (IBlockData) iblockdata.set(BlockSoil.MOISTURE, i - 1), 2); // CraftBukkit
+-            } else if (!a((IBlockAccess) worldserver, blockposition)) {
++            } else if (!checkBlock((WorldServer) worldserver, blockposition)) { // Airplane - change cast & name
+                 fade(iblockdata, worldserver, blockposition);
+             }
+         } else if (i < 7) {
+@@ -109,13 +109,13 @@ public class BlockSoil extends Block {
+         world.setTypeUpdate(blockposition, a(iblockdata, Blocks.DIRT.getBlockData(), world, blockposition));
+     }
+ 
+-    private static boolean a(IBlockAccess iblockaccess, BlockPosition blockposition) {
+-        Block block = iblockaccess.getType(blockposition.up()).getBlock();
++    private static boolean checkBlock(WorldServer iblockaccess, BlockPosition blockposition) { // Airplane - change param & method name
++        Block block = iblockaccess.getCurrentlyTickingType(blockposition.up()).getBlock(); // Airplane - use currently ticking block
+ 
+         return block instanceof BlockCrops || block instanceof BlockStem || block instanceof BlockStemAttached;
+     }
+ 
+-    private static boolean a(IWorldReader iworldreader, BlockPosition blockposition) {
++    private static boolean a(WorldServer iworldreader, BlockPosition blockposition) { // Airplane - change param to WorldServer
+         Iterator iterator = BlockPosition.a(blockposition.b(-4, 0, -4), blockposition.b(4, 1, 4)).iterator();
+ 
+         BlockPosition blockposition1;
+@@ -126,7 +126,7 @@ public class BlockSoil extends Block {
+             }
+ 
+             blockposition1 = (BlockPosition) iterator.next();
+-        } while (!iworldreader.getFluid(blockposition1).a((Tag) TagsFluid.WATER));
++        } while (!iworldreader.getCurrentlyTickingFluid(blockposition1).a((Tag) TagsFluid.WATER)); // Airplane - use currently ticking fluid
+ 
+         return true;
+     }
+diff --git a/src/main/java/net/minecraft/server/BlockStem.java b/src/main/java/net/minecraft/server/BlockStem.java
+index c6b8c37f076c0a5ce11d5187b059ea1ab5c03369..eea36dfd62c99cc3503a138d7a1df134c37b24b6 100644
+--- a/src/main/java/net/minecraft/server/BlockStem.java
++++ b/src/main/java/net/minecraft/server/BlockStem.java
+@@ -29,7 +29,7 @@ public class BlockStem extends BlockPlant implements IBlockFragilePlantElement {
+     @Override
+     public void tick(IBlockData iblockdata, WorldServer worldserver, BlockPosition blockposition, Random random) {
+         if (worldserver.getLightLevel(blockposition, 0) >= 9) {
+-            float f = BlockCrops.a((Block) this, (IBlockAccess) worldserver, blockposition);
++            float f = BlockCrops.a((Block) this, (WorldServer) worldserver, blockposition); // Airplane - change cast to WorldServer
+ 
+             if (random.nextInt((int) ((100.0F / (this == Blocks.PUMPKIN_STEM ? worldserver.spigotConfig.pumpkinModifier : worldserver.spigotConfig.melonModifier)) * (25.0F / f)) + 1) == 0) { // Spigot
+                 int i = (Integer) iblockdata.get(BlockStem.AGE);
+@@ -40,9 +40,9 @@ public class BlockStem extends BlockPlant implements IBlockFragilePlantElement {
+                 } else {
+                     EnumDirection enumdirection = EnumDirection.EnumDirectionLimit.HORIZONTAL.a(random);
+                     BlockPosition blockposition1 = blockposition.shift(enumdirection);
+-                    IBlockData iblockdata1 = worldserver.getType(blockposition1.down());
++                    IBlockData iblockdata1 = worldserver.getCurrentlyTickingType(blockposition1.down()); // Airplane - use currently ticking type
+ 
+-                    if (worldserver.getType(blockposition1).isAir() && (iblockdata1.a(Blocks.FARMLAND) || iblockdata1.a(Blocks.DIRT) || iblockdata1.a(Blocks.COARSE_DIRT) || iblockdata1.a(Blocks.PODZOL) || iblockdata1.a(Blocks.GRASS_BLOCK))) {
++                    if (worldserver.getCurrentlyTickingType(blockposition1).isAir() && (iblockdata1.a(Blocks.FARMLAND) || iblockdata1.a(Blocks.DIRT) || iblockdata1.a(Blocks.COARSE_DIRT) || iblockdata1.a(Blocks.PODZOL) || iblockdata1.a(Blocks.GRASS_BLOCK))) { // Airplane - use currently ticking type
+                         // CraftBukkit start
+                         if (!CraftEventFactory.handleBlockGrowEvent(worldserver, blockposition1, this.blockFruit.getBlockData())) {
+                             return;
+diff --git a/src/main/java/net/minecraft/server/BlockVine.java b/src/main/java/net/minecraft/server/BlockVine.java
+index 7980ce67b927b349bdf0ca680deda8252149eb8f..9786ee47256cc4817adc696b58b1c5ebbb796ff0 100644
+--- a/src/main/java/net/minecraft/server/BlockVine.java
++++ b/src/main/java/net/minecraft/server/BlockVine.java
+@@ -166,9 +166,9 @@ public class BlockVine extends Block {
+             EnumDirection enumdirection1;
+ 
+             if (enumdirection.n().d() && !(Boolean) iblockdata.get(getDirection(enumdirection))) {
+-                if (this.a((IBlockAccess) worldserver, blockposition)) {
++                if (this.a(worldserver, blockposition)) { // Airplane - remove cast
+                     blockposition2 = blockposition.shift(enumdirection);
+-                    iblockdata1 = worldserver.getType(blockposition2);
++                    iblockdata1 = worldserver.getCurrentlyTickingType(blockposition2); // Airplane - use currently ticking type
+                     if (iblockdata1.isAir()) {
+                         enumdirection1 = enumdirection.g();
+                         EnumDirection enumdirection2 = enumdirection.h();
+@@ -208,8 +208,8 @@ public class BlockVine extends Block {
+                         return;
+                     }
+ 
+-                    if (worldserver.isEmpty(blockposition1)) {
+-                        if (!this.a((IBlockAccess) worldserver, blockposition)) {
++                    if (worldserver.isCurrentlyTickingEmpty(blockposition1)) { // Airplane - use currently ticking check
++                        if (!this.a(worldserver, blockposition)) { // Airplane - remove cast
+                             return;
+                         }
+ 
+@@ -233,7 +233,7 @@ public class BlockVine extends Block {
+ 
+                 if (blockposition.getY() > 0) {
+                     blockposition2 = blockposition.down();
+-                    iblockdata1 = worldserver.getType(blockposition2);
++                    iblockdata1 = worldserver.getCurrentlyTickingType(blockposition2); // Airplane - use currently ticking type
+                     if (iblockdata1.isAir() || iblockdata1.a((Block) this)) {
+                         IBlockData iblockdata3 = iblockdata1.isAir() ? this.getBlockData() : iblockdata1;
+                         IBlockData iblockdata4 = this.a(iblockdata, iblockdata3, random);
+@@ -270,7 +270,7 @@ public class BlockVine extends Block {
+         return (Boolean) iblockdata.get(BlockVine.NORTH) || (Boolean) iblockdata.get(BlockVine.EAST) || (Boolean) iblockdata.get(BlockVine.SOUTH) || (Boolean) iblockdata.get(BlockVine.WEST);
+     }
+ 
+-    private boolean a(IBlockAccess iblockaccess, BlockPosition blockposition) {
++    private boolean a(WorldServer iblockaccess, BlockPosition blockposition) { // Airplane - change param to worldserver
+         boolean flag = true;
+         Iterable<BlockPosition> iterable = BlockPosition.b(blockposition.getX() - 4, blockposition.getY() - 1, blockposition.getZ() - 4, blockposition.getX() + 4, blockposition.getY() + 1, blockposition.getZ() + 4);
+         int i = 5;
+@@ -279,7 +279,7 @@ public class BlockVine extends Block {
+         while (iterator.hasNext()) {
+             BlockPosition blockposition1 = (BlockPosition) iterator.next();
+ 
+-            if (iblockaccess.getType(blockposition1).a((Block) this)) {
++            if (iblockaccess.getCurrentlyTickingType(blockposition1).a((Block) this)) { // Airplane - use currently ticking type
+                 --i;
+                 if (i <= 0) {
+                     return false;
+diff --git a/src/main/java/net/minecraft/server/FluidTypeLava.java b/src/main/java/net/minecraft/server/FluidTypeLava.java
+index 29930e801cdcb97bec2fb113ec478fe9c4a63b63..a47c39912d4dadd83a9dd329d4094531b6344d2a 100644
+--- a/src/main/java/net/minecraft/server/FluidTypeLava.java
++++ b/src/main/java/net/minecraft/server/FluidTypeLava.java
+@@ -35,12 +35,12 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+                         return;
+                     }
+ 
+-                    IBlockData iblockdata = world.getType(blockposition1);
++                    IBlockData iblockdata = world.getCurrentlyTickingType(blockposition1); // Airplane - use currently ticking type
+ 
+                     if (iblockdata.isAir()) {
+-                        if (this.a((IWorldReader) world, blockposition1)) {
++                        if (this.a((WorldServer) world, blockposition1)) { // Airplane - change cast from WorldReader -> WorldServer
+                             // CraftBukkit start - Prevent lava putting something on fire
+-                            if (world.getType(blockposition1).getBlock() != Blocks.FIRE) {
++                            if (world.getCurrentlyTickingType(blockposition1).getBlock() != Blocks.FIRE) { // Airplane - use currently ticking type
+                                 if (org.bukkit.craftbukkit.event.CraftEventFactory.callBlockIgniteEvent(world, blockposition1, blockposition).isCancelled()) {
+                                     continue;
+                                 }
+@@ -61,10 +61,10 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+                         return;
+                     }
+ 
+-                    if (world.isEmpty(blockposition2.up()) && this.b(world, blockposition2)) {
++                    if (world.isCurrentlyTickingEmpty(blockposition2.up()) && this.b((WorldServer) world, blockposition2)) { // Airplane - use currently ticking check, cast to worldserver
+                         // CraftBukkit start - Prevent lava putting something on fire
+                         BlockPosition up = blockposition2.up();
+-                        if (world.getType(up).getBlock() != Blocks.FIRE) {
++                        if (world.getCurrentlyTickingType(up).getBlock() != Blocks.FIRE) { // Airplane - use currently ticking type
+                             if (org.bukkit.craftbukkit.event.CraftEventFactory.callBlockIgniteEvent(world, up, blockposition).isCancelled()) {
+                                 continue;
+                             }
+@@ -78,7 +78,7 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+         }
+     }
+ 
+-    private boolean a(IWorldReader iworldreader, BlockPosition blockposition) {
++    private boolean a(WorldServer iworldreader, BlockPosition blockposition) { // Airplane - change param to worldserver
+         EnumDirection[] aenumdirection = EnumDirection.values();
+         int i = aenumdirection.length;
+ 
+@@ -93,8 +93,8 @@ public abstract class FluidTypeLava extends FluidTypeFlowing {
+         return false;
+     }
+ 
+-    private boolean b(IWorldReader iworldreader, BlockPosition blockposition) {
+-        return blockposition.getY() >= 0 && blockposition.getY() < 256 && !iworldreader.isLoaded(blockposition) ? false : iworldreader.getType(blockposition).getMaterial().isBurnable();
++    private boolean b(WorldServer iworldreader, BlockPosition blockposition) { // Airplane - change param to worldserver
++        return blockposition.getY() >= 0 && blockposition.getY() < 256 && iworldreader.getCurrentlyTickingChunkIfLoaded(blockposition) == null ? false : iworldreader.getCurrentlyTickingType(blockposition).getMaterial().isBurnable(); // Airplane - use currently ticking
+     }
+ 
+     @Override
+diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
+index d701c5f94fe13ce41bb45c54ddb7667e2f773086..5b7a1decd42f2364aee0e3d9df5c52e873f3519e 100644
+--- a/src/main/java/net/minecraft/server/World.java
++++ b/src/main/java/net/minecraft/server/World.java
+@@ -460,6 +460,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+     public final Chunk getChunkIfLoaded(BlockPosition blockposition) {
+         return ((WorldServer) this).getChunkProvider().getChunkAtIfLoadedImmediately(blockposition.getX() >> 4, blockposition.getZ() >> 4);
+     }
++    // Airplane start - getChunkIfLoaded with currently ticking check
++    public Chunk getCurrentlyTickingChunkIfLoaded(BlockPosition blockposition) {
++        int chunkX = blockposition.getX() >> 4, chunkZ = blockposition.getZ() >> 4;
++        if (chunkX == this.currentlyTickingChunk.locX && chunkZ == this.currentlyTickingChunk.locZ) {
++            return this.currentlyTickingChunk;
++        }
++        return ((WorldServer) this).getChunkProvider().getChunkAtIfLoadedImmediately(chunkX, chunkZ);
++    }
++    // Airplane end
+ 
+     //  reduces need to do isLoaded before getType
+     public final IBlockData getTypeIfLoadedAndInBounds(BlockPosition blockposition) {
+@@ -787,6 +796,8 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+         return this.getChunkProvider().getLightEngine();
+     }
+ 
++    protected Chunk currentlyTickingChunk; // Airplane - the chunk being ticked
++
+     @Override
+     public IBlockData getType(BlockPosition blockposition) {
+         // CraftBukkit start - tree generation
+@@ -806,6 +817,32 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+         }
+     }
+ 
++    // Airplane start - version of getType for block ticking
++    public IBlockData getCurrentlyTickingType(BlockPosition blockposition) {
++        // CraftBukkit start - tree generation
++        if (captureTreeGeneration) {
++            CraftBlockState previous = capturedBlockStates.get(blockposition); // Paper
++            if (previous != null) {
++                return previous.getHandle();
++            }
++        }
++        // CraftBukkit end
++        if (isOutsideWorld(blockposition)) {
++            return Blocks.VOID_AIR.getBlockData();
++        } else {
++            int chunkX = blockposition.getX() >> 4, chunkZ = blockposition.getZ() >> 4;
++            Chunk chunk;
++            if (this.currentlyTickingChunk.locX == chunkX && this.currentlyTickingChunk.locZ == chunkZ) {
++                chunk = this.currentlyTickingChunk;
++            } else {
++                chunk = (Chunk) this.getChunkProvider().getChunkAt(chunkX, chunkZ, ChunkStatus.FULL, true); // Paper - manually inline to reduce hops and avoid unnecessary null check to reduce total byte code size, this should never return null and if it does we will see it the next line but the real stack trace will matter in the chunk engine
++            }
++
++            return chunk.getType(blockposition);
++        }
++    }
++    // Airplane end
++
+     @Override
+     public Fluid getFluid(BlockPosition blockposition) {
+         if (isOutsideWorld(blockposition)) {
+@@ -817,6 +854,32 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+         }
+     }
+ 
++    // Airplane start - version of getFluid for block ticking
++    public Fluid getCurrentlyTickingFluid(BlockPosition blockposition) {
++        if (isOutsideWorld(blockposition)) {
++            return FluidTypes.EMPTY.h();
++        } else {
++            int chunkX = blockposition.getX() >> 4, chunkZ = blockposition.getZ() >> 4;
++            Chunk chunk;
++            if (this.currentlyTickingChunk.locX == chunkX && this.currentlyTickingChunk.locZ == chunkZ) {
++                chunk = this.currentlyTickingChunk;
++            } else {
++                chunk = this.getChunkAt(blockposition.getX() >> 4, blockposition.getZ() >> 4);
++            }
++
++            return chunk.getFluid(blockposition);
++        }
++    }
++    // Airplane end
++
++    // Airplane start - version of isEmpty for block ticking
++    public boolean isCurrentlyTickingEmpty(BlockPosition blockposition) {
++        return this.getCurrentlyTickingType(blockposition).isAir();
++    }
++    // Airplane end
++
++    // Airplane start -
++
+     public boolean isDay() {
+         return !this.getDimensionManager().isFixedTime() && this.d < 4;
+     }
+diff --git a/src/main/java/net/minecraft/server/WorldServer.java b/src/main/java/net/minecraft/server/WorldServer.java
+index e000723146d662f29dc279a168615ed9385d09ec..4596b351945a064d2b6fcf2b085e4e04508b7098 100644
+--- a/src/main/java/net/minecraft/server/WorldServer.java
++++ b/src/main/java/net/minecraft/server/WorldServer.java
+@@ -1049,6 +1049,7 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+         // Paper start - optimise random block ticking
+         gameprofilerfiller.exit();
+         if (i > 0) {
++            this.currentlyTickingChunk = chunk; // Airplane - assign currently ticking chunk
+             gameprofilerfiller.enter("randomTick");
+             timings.chunkTicksBlocks.startTiming(); // Paper
+ 
+@@ -1084,6 +1085,7 @@ public class WorldServer extends World implements GeneratorAccessSeed {
+                     // TODO CHECK ON UPDATE
+                 }
+             }
++            this.currentlyTickingChunk = null; // Airplane - unassign currently ticking chunk
+             gameprofilerfiller.exit();
+             timings.chunkTicksBlocks.stopTiming(); // Paper
+             // Airplane start
