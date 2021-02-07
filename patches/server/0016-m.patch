@@ -4,6 +4,20 @@ Date: Sat, 6 Feb 2021 17:25:49 -0600
 Subject: [PATCH] m
 
 
+diff --git a/src/main/java/net/minecraft/server/Chunk.java b/src/main/java/net/minecraft/server/Chunk.java
+index bc4fe8ee251b02548d713ab88e329a266cd7e626..95f25b50ada51d168396a5276b227a1e543b98f2 100644
+--- a/src/main/java/net/minecraft/server/Chunk.java
++++ b/src/main/java/net/minecraft/server/Chunk.java
+@@ -726,7 +726,9 @@ public class Chunk implements IChunkAccess {
+             }
+ 
+             if (!this.world.isClientSide) {
++                this.world.currentlyTickingChunk = this; // Airplane - assign currently ticking chunk
+                 iblockdata1.remove(this.world, blockposition, iblockdata, flag);
++                this.world.currentlyTickingChunk = null; // Airplane - unassign currently ticking chunk
+             } else if (block1 != block && block1 instanceof ITileEntity) {
+                 this.world.removeTileEntity(blockposition);
+             }
 diff --git a/src/main/java/net/minecraft/server/FluidTypeLava.java b/src/main/java/net/minecraft/server/FluidTypeLava.java
 index 29930e801cdcb97bec2fb113ec478fe9c4a63b63..e505d2f180d183eaf2e92c8c63c7052b3933bedc 100644
 --- a/src/main/java/net/minecraft/server/FluidTypeLava.java
@@ -56,8 +70,29 @@ index 29930e801cdcb97bec2fb113ec478fe9c4a63b63..e505d2f180d183eaf2e92c8c63c7052b
      }
  
      @Override
+diff --git a/src/main/java/net/minecraft/server/ItemStack.java b/src/main/java/net/minecraft/server/ItemStack.java
+index afa1dc693bc2e2e68294a1d3dec1c078ea95b286..279a8a739c6db0288a4531a9fd8487a311a78b70 100644
+--- a/src/main/java/net/minecraft/server/ItemStack.java
++++ b/src/main/java/net/minecraft/server/ItemStack.java
+@@ -310,10 +310,15 @@ public final class ItemStack {
+                         int updateFlag = ((CraftBlockState) blockstate).getFlag();
+                         IBlockData oldBlock = ((CraftBlockState) blockstate).getHandle();
+                         BlockPosition newblockposition = ((CraftBlockState) blockstate).getPosition();
+-                        IBlockData block = world.getType(newblockposition);
++                        // Airplane start - look up chunk once for onPlace below
++                        Chunk chunk = world.getChunkAtWorldCoords(newblockposition);
++                        IBlockData block = chunk.getType(newblockposition);
+ 
+                         if (!(block.getBlock() instanceof BlockTileEntity)) { // Containers get placed automatically
++                            world.currentlyTickingChunk = chunk;
+                             block.getBlock().onPlace(block, world, newblockposition, oldBlock, true, itemactioncontext); // Paper - pass itemactioncontext
++                            world.currentlyTickingChunk = null;
++                            // Airplane end
+                         }
+ 
+                         world.notifyAndUpdatePhysics(newblockposition, null, oldBlock, block, world.getType(newblockposition), updateFlag, 512); // send null chunk as chunk.k() returns false by this point
 diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
-index 9dc574326e22669cb69f856a64bfc12cc95ef511..3d991529b3477f8ddb0861053357d32c774e7595 100644
+index 9dc574326e22669cb69f856a64bfc12cc95ef511..b6fe0e7dea1753e0068a072aee89ed2ecb681094 100644
 --- a/src/main/java/net/minecraft/server/World.java
 +++ b/src/main/java/net/minecraft/server/World.java
 @@ -460,6 +460,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
@@ -76,7 +111,28 @@ index 9dc574326e22669cb69f856a64bfc12cc95ef511..3d991529b3477f8ddb0861053357d32c
  
      //  reduces need to do isLoaded before getType
      public final IBlockData getTypeIfLoadedAndInBounds(BlockPosition blockposition) {
-@@ -787,6 +796,8 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+@@ -729,7 +738,9 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+     public void neighborChanged(BlockPosition pos, Block blockIn, BlockPosition fromPos) { a(pos, blockIn, fromPos); } // Paper - OBFHELPER
+     public void a(BlockPosition blockposition, Block block, BlockPosition blockposition1) {
+         if (!this.isClientSide) {
+-            IBlockData iblockdata = this.getType(blockposition);
++            // Airplane start - store chunk for physics
++            Chunk chunk = this.getChunkAtWorldCoords(blockposition);
++            IBlockData iblockdata = chunk.getType(blockposition);
+ 
+             try {
+                 // CraftBukkit start
+@@ -743,7 +754,9 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+                     }
+                 }
+                 // CraftBukkit end
++                this.currentlyTickingChunk = chunk;
+                 iblockdata.doPhysics(this, blockposition, block, blockposition1, false);
++                this.currentlyTickingChunk = null;
+             // Spigot Start
+             } catch (StackOverflowError ex) {
+                 lastPhysicsProblem = new BlockPosition(blockposition);
+@@ -787,6 +800,8 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
          return this.getChunkProvider().getLightEngine();
      }
  
@@ -85,7 +141,7 @@ index 9dc574326e22669cb69f856a64bfc12cc95ef511..3d991529b3477f8ddb0861053357d32c
      @Override
      public IBlockData getType(BlockPosition blockposition) {
          // CraftBukkit start - tree generation
-@@ -800,7 +811,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+@@ -800,7 +815,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
          if (isOutsideWorld(blockposition)) {
              return Blocks.VOID_AIR.getBlockData();
          } else {
@@ -102,7 +158,7 @@ index 9dc574326e22669cb69f856a64bfc12cc95ef511..3d991529b3477f8ddb0861053357d32c
  
              return chunk.getType(blockposition);
          }
-@@ -811,7 +830,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
+@@ -811,7 +834,15 @@ public abstract class World implements GeneratorAccess, AutoCloseable {
          if (isOutsideWorld(blockposition)) {
              return FluidTypes.EMPTY.h();
          } else {
